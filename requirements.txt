@@ -1,0 +1,21 @@
+﻿# 安装前先按自己的 CUDA/CPU 环境安装 torch/torchvision/torchaudio（示例见 README）
+accelerate==0.28.0
+einops==0.7.0
+facexlib==0.3.0
+ftfy==6.2.0
+gradio==4.25.0
+lpips==0.1.4
+numpy==1.26.4
+omegaconf==2.3.0
+opencv-python==4.9.0.80
+pandas==2.2.3
+Pillow==11.0.0
+protobuf==4.25.3
+PyQt5==5.15.9
+python-dateutil==2.9.0.post0
+pytorch-lightning==2.2.1
+regex==2023.12.25
+scipy==1.12.0
+tensorboard==2.16.2
+timm==0.9.16
+ultralytics==8.3.71
