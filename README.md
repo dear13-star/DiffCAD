@@ -43,10 +43,3 @@ python app.py
 - `test_data/`: sample images/videos for quick verification
 - `output/`: results generated after runs
 
-## Video Submission
-- Place the 3 demo videos in `test_data/` or a new `videos/` folder. Keep each file <100 MB; if larger, use Git LFS or share download links.
-
-## FAQ
-- App won’t start: ensure PyQt5 installed and virtual env activated.
-- GPU errors: confirm CUDA version matches the installed PyTorch wheels.
-- Weight not found: verify filenames and the `weights/` path.
