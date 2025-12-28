@@ -1,4 +1,4 @@
-﻿# StomaD²
+﻿# DiffCAD
 
 PyQt5-based desktop app for stomata detection and restoration. It integrates YOLO OBB models for dicotyledon/monocotyledon leaf stomata detection and optionally uses DiffBIR for restoration/denoising. Supports images, videos, and live camera input, and can batch export annotated media and CSV/AVI results.
 
@@ -42,4 +42,5 @@ python app.py
 - `weights/`: detection + restoration weights (download/place manually)
 - `test_data/`: sample images/videos for quick verification
 - `output/`: results generated after runs
+
 
