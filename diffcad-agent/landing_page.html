@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DIffCAD Agent — Plant Stomata Intelligence</title>
+  <style>
+    :root {
+      --bg0: #061b15;
+      --bg1: #0d3024;
+      --bg2: #14523a;
+      --panel: rgba(6, 28, 18, .72);
+      --panel2: rgba(255,255,255,.065);
+      --line: rgba(200, 240, 220, .16);
+      --line2: rgba(200, 240, 220, .09);
+      --text: #f0f9f3;
+      --muted: rgba(230, 248, 238, .64);
+      --muted2: rgba(230, 248, 238, .42);
+      --green: #5ce0aa;
+      --green2: #a0f0cc;
+      --cyan: #9edff4;
+      --amber: #f1d17b;
+      --danger: #ff9d8f;
+      --radius: 26px;
+      --radius2: 18px;
+      --shadow: 0 24px 56px rgba(0,0,0,.32);
+      --shadow2: 0 10px 28px rgba(0,0,0,.18);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      color: var(--text);
+      font-family: Inter, "Segoe UI", system-ui, -apple-system, sans-serif;
+      background:
+        url('icons/bg.png') center / cover no-repeat fixed;
+      overflow-x: hidden;
+    }
+    body::after {
+      content: "";
+      position: fixed; inset: 0; pointer-events: none; z-index: -2;
+      background: rgba(4, 18, 12, 0.48);
+    }
+    body::before {
+      content: "";
+      position: fixed; inset: 0; pointer-events: none; z-index: -1;
+      background-image:
+        linear-gradient(rgba(255,255,255,.014) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.014) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: linear-gradient(to bottom, #000, rgba(0,0,0,.24));
+    }
+
+    /* ---- layout ---- */
+    .app {
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      max-width: 960px; margin: 0 auto; padding: 0 24px;
+    }
+
+    /* ---- nav ---- */
+    .topnav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,.06);
+      flex-shrink: 0;
+    }
+    .nav-brand {
+      display: flex; align-items: center; gap: 10px;
+      text-decoration: none; color: var(--text); cursor: pointer;
+    }
+    .nav-logo {
+      width: 38px; height: 38px; border-radius: 11px;
+      display: grid; place-items: center;
+      background: linear-gradient(135deg, var(--green), var(--cyan));
+    }
+    .nav-logo svg { width: 24px; height: 24px; }
+    .nav-brand-text { font-size: 16px; font-weight: 700; letter-spacing: -.01em; }
+    .nav-brand-sub { font-size: 10px; color: var(--muted); display: block; }
+    .nav-links { display: flex; gap: 6px; align-items: center; }
+    .nav-link {
+      padding: 7px 14px; border-radius: 999px; font-size: 12px; font-weight: 600;
+      color: var(--muted); cursor: pointer; transition: all .18s ease;
+      background: transparent; border: 1px solid transparent;
+      font-family: inherit; text-decoration: none;
+    }
+    .nav-link:hover { color: var(--text); background: rgba(255,255,255,.06); }
+    .nav-link.active { color: var(--green2); background: rgba(92,224,170,.08); border-color: rgba(92,224,170,.2); }
+    .nav-link.dot-indicator { position: relative; }
+    .nav-link.dot-indicator::after {
+      content: ""; position: absolute; top: 6px; right: 8px;
+      width: 6px; height: 6px; border-radius: 50%; background: var(--green);
+    }
+    .nav-link.dot-indicator.offline::after { background: var(--amber); }
+
+    /* ---- views ---- */
+    .view { display: none; flex-direction: column; flex: 1; }
+    .view.active { display: flex; }
+
+    /* ========== LANDING VIEW ========== */
+    .landing-hero {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; text-align: center; padding: 60px 0;
+    }
+    .landing-title {
+      font-size: 52px; font-weight: 900; letter-spacing: -.03em;
+      background: linear-gradient(135deg, var(--green2) 0%, var(--cyan) 60%, #f0f9f3 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; margin-bottom: 12px; line-height: 1.25; padding-bottom: 4px;
+    }
+    .landing-subtitle {
+      font-size: 18px; color: var(--muted); font-weight: 500;
+      max-width: 580px; margin-bottom: 8px; line-height: 1.55; padding-bottom: 2px;
+    }
+    .landing-desc {
+      font-size: 13px; color: var(--muted2); max-width: 520px;
+      margin-bottom: 48px; line-height: 1.6;
+    }
+
+    /* ---- entry cards ---- */
+    .entry-cards {
+      display: grid; grid-template-columns: repeat(2, 1fr);
+      gap: 14px; width: 100%; max-width: 640px;
+    }
+    .entry-card {
+      padding: 28px 24px; border-radius: 20px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid var(--line2);
+      cursor: pointer; transition: all .25s ease;
+      text-align: left; text-decoration: none; color: inherit;
+      display: flex; flex-direction: column; gap: 8px;
+      position: relative; overflow: hidden;
+    }
+    .entry-card::before {
+      content: ""; position: absolute; inset: 0; border-radius: inherit;
+      background: radial-gradient(circle at 80% 0%, rgba(92,224,170,.06), transparent 60%);
+      opacity: 0; transition: opacity .25s ease;
+    }
+    .entry-card:hover {
+      background: rgba(255,255,255,.08);
+      border-color: var(--line);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(0,0,0,.18), 0 0 0 1px rgba(92,224,170,.08) inset;
+    }
+    .entry-card:hover::before { opacity: 1; }
+    .entry-card .ec-icon { font-size: 28px; margin-bottom: 4px; position: relative; z-index: 1; }
+    .entry-card .ec-title {
+      font-size: 17px; font-weight: 700; color: var(--text);
+      position: relative; z-index: 1;
+    }
+    .entry-card .ec-desc {
+      font-size: 12px; color: var(--muted); line-height: 1.5;
+      position: relative; z-index: 1;
+    }
+    .entry-card .ec-arrow {
+      margin-top: auto; font-size: 13px; color: var(--green);
+      font-weight: 600; position: relative; z-index: 1;
+      opacity: 0; transform: translateX(-4px); transition: all .2s ease;
+    }
+    .entry-card:hover .ec-arrow { opacity: 1; transform: translateX(0); }
+
+    /* ---- footer ---- */
+    .landing-footer {
+      text-align: center; padding: 20px 0 32px;
+      font-size: 10.5px; color: var(--muted2);
+    }
+    .landing-footer a { color: var(--green); text-decoration: none; cursor: pointer; }
+
+    /* ========== API DOCS VIEW ========== */
+    .docs-container {
+      max-width: 820px; margin: 0 auto; width: 100%;
+      padding: 40px 0 60px;
+    }
+    .docs-header {
+      margin-bottom: 32px;
+    }
+    .docs-header h2 {
+      font-size: 30px; font-weight: 800; letter-spacing: -.02em; margin-bottom: 6px;
+    }
+    .docs-header p { color: var(--muted); font-size: 13px; }
+    .endpoint-group {
+      margin-bottom: 28px;
+    }
+    .endpoint-group h3 {
+      font-size: 13px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--green); margin-bottom: 10px;
+    }
+    .endpoint-card {
+      padding: 18px 20px; border-radius: 16px;
+      background: rgba(255,255,255,.045); border: 1px solid var(--line2);
+      margin-bottom: 10px; transition: all .2s ease;
+    }
+    .endpoint-card:hover { background: rgba(255,255,255,.065); border-color: var(--line); }
+    .ep-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+    .ep-method {
+      display: inline-block; padding: 3px 8px; border-radius: 6px;
+      font-size: 10px; font-weight: 800; letter-spacing: .03em;
+      background: rgba(92,224,170,.14); color: var(--green2);
+    }
+    .ep-path {
+      font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+      font-size: 13px; color: var(--text); font-weight: 600;
+    }
+    .ep-desc { font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+    .ep-tags { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+    .ep-tag {
+      font-size: 9px; padding: 3px 7px; border-radius: 999px;
+      background: rgba(255,255,255,.045); border: 1px solid var(--line2);
+      color: var(--muted2);
+    }
+
+    /* ========== MODEL STATUS VIEW ========== */
+    .status-container {
+      max-width: 720px; margin: 0 auto; width: 100%;
+      padding: 40px 0 60px;
+    }
+    .status-header { margin-bottom: 32px; }
+    .status-header h2 { font-size: 30px; font-weight: 800; letter-spacing: -.02em; margin-bottom: 6px; }
+    .status-header p { color: var(--muted); font-size: 13px; }
+    .status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+    .status-card {
+      padding: 16px 18px; border-radius: 16px;
+      background: rgba(255,255,255,.045); border: 1px solid var(--line2);
+    }
+    .status-card label { display: block; font-size: 9px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted2); margin-bottom: 6px; }
+    .status-card .val { font-size: 18px; font-weight: 700; color: var(--text); }
+    .status-card .val.ok { color: var(--green); }
+    .status-card .val.warn { color: var(--amber); }
+    .status-card .val.err { color: var(--danger); }
+    .weight-list { margin-top: 16px; }
+    .weight-list h3 { font-size: 13px; margin-bottom: 10px; color: var(--text); }
+    .weight-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 14px; border-radius: 12px;
+      background: rgba(255,255,255,.04); border: 1px solid var(--line2);
+      margin-bottom: 6px; font-size: 12px;
+    }
+    .weight-row .w-name { font-weight: 600; color: var(--text); }
+    .weight-row .w-status { font-size: 10.5px; }
+    .weight-row .w-status.loaded { color: var(--green); }
+    .weight-row .w-status.failed { color: var(--danger); }
+    .weight-row .w-status.missing { color: var(--amber); }
+    .status-error { padding: 14px; border-radius: 12px; background: rgba(255,157,143,.08); border: 1px solid rgba(255,157,143,.2); color: var(--amber); font-size: 12px; }
+
+    /* ---- loading ---- */
+    .loading-spin {
+      display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.1);
+      border-top-color: var(--green); border-radius: 50%;
+      animation: spin .6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ---- API docs: sidebar layout ---- */
+    .docs-layout { display: flex; gap: 28px; flex: 1; min-height: 0; }
+    .docs-sidebar {
+      width: 200px; flex-shrink: 0;
+      position: sticky; top: 24px; align-self: flex-start;
+      max-height: calc(100vh - 100px); overflow-y: auto;
+    }
+    .docs-sidebar .ds-title {
+      font-size: 10px; text-transform: uppercase; letter-spacing: .06em;
+      color: var(--muted2); margin-bottom: 8px; font-weight: 700;
+    }
+    .docs-sidebar a {
+      display: block; padding: 6px 10px; border-radius: 8px;
+      font-size: 11.5px; color: var(--muted); text-decoration: none;
+      transition: all .15s ease; margin-bottom: 2px;
+    }
+    .docs-sidebar a:hover { color: var(--text); background: rgba(255,255,255,.05); }
+    .docs-sidebar a.active { color: var(--green2); background: rgba(92,224,170,.08); }
+    .docs-main { flex: 1; min-width: 0; padding-bottom: 60px; }
+
+    /* ---- endpoint section ---- */
+    .ep-section {
+      margin-bottom: 36px; scroll-margin-top: 28px;
+    }
+    .ep-section h3 {
+      font-size: 19px; font-weight: 700; margin-bottom: 6px; color: var(--text);
+    }
+    .ep-section > p { color: var(--muted); font-size: 12.5px; margin-bottom: 16px; line-height: 1.55; }
+    .ep-badge {
+      display: inline-block; padding: 3px 10px; border-radius: 6px;
+      font-size: 11px; font-weight: 800; letter-spacing: .03em; margin-bottom: 10px;
+    }
+    .ep-badge.post { background: rgba(92,224,170,.14); color: var(--green2); }
+    .ep-badge.get  { background: rgba(158,223,244,.14); color: var(--cyan); }
+    .ep-url {
+      font-family: "SF Mono","Fira Code","Consolas",monospace;
+      font-size: 15px; color: var(--text); font-weight: 600; margin-left: 8px;
+    }
+
+    /* ---- param table ---- */
+    .param-table {
+      width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 11.5px;
+    }
+    .param-table th {
+      text-align: left; padding: 7px 10px; color: var(--muted2);
+      font-weight: 600; text-transform: uppercase; font-size: 9px; letter-spacing: .05em;
+      border-bottom: 1px solid var(--line2);
+    }
+    .param-table td {
+      padding: 7px 10px; border-bottom: 1px solid rgba(255,255,255,.04);
+      color: var(--muted); vertical-align: top;
+    }
+    .param-table td:first-child { color: var(--text); font-weight: 600; font-family: monospace; font-size: 11px; }
+    .param-table td:last-child { font-size: 10.5px; }
+    .param-required {
+      display: inline-block; padding: 1px 5px; border-radius: 4px;
+      font-size: 8px; font-weight: 800; letter-spacing: .04em;
+      background: rgba(255,157,143,.18); color: var(--danger);
+    }
+    .param-optional {
+      display: inline-block; padding: 1px 5px; border-radius: 4px;
+      font-size: 8px; font-weight: 800; letter-spacing: .04em;
+      background: rgba(255,255,255,.06); color: var(--muted2);
+    }
+
+    /* ---- code blocks ---- */
+    .code-tabs { display: flex; gap: 4px; margin-bottom: 0; }
+    .code-tab {
+      padding: 6px 14px; border-radius: 8px 8px 0 0; font-size: 10.5px;
+      font-weight: 600; cursor: pointer; border: 1px solid transparent;
+      background: rgba(255,255,255,.03); color: var(--muted2);
+      transition: all .15s ease; font-family: inherit;
+    }
+    .code-tab:hover { color: var(--text); }
+    .code-tab.active {
+      background: rgba(255,255,255,.07); color: var(--green2);
+      border-color: var(--line2); border-bottom-color: transparent;
+    }
+    .code-block {
+      background: rgba(0,0,0,.35); border: 1px solid var(--line2);
+      border-radius: 0 12px 12px 12px; padding: 16px 18px;
+      font-family: "SF Mono","Fira Code","Consolas",monospace;
+      font-size: 11px; line-height: 1.65; color: var(--muted);
+      overflow-x: auto; white-space: pre; position: relative;
+      margin-bottom: 10px; max-height: 300px; overflow-y: auto;
+    }
+    .code-block .kw { color: #c084fc; }
+    .code-block .str { color: #a0f0cc; }
+    .code-block .cmt { color: rgba(255,255,255,.25); }
+    .code-block .fn { color: #9edff4; }
+    .copy-btn {
+      position: absolute; top: 8px; right: 10px;
+      font-size: 10px; padding: 4px 10px; border-radius: 6px;
+      background: rgba(255,255,255,.08); color: var(--muted2);
+      border: none; cursor: pointer; transition: all .15s ease;
+      font-family: inherit;
+    }
+    .copy-btn:hover { background: rgba(255,255,255,.16); color: var(--text); }
+    .copy-btn.copied { background: rgba(92,224,170,.16); color: var(--green2); }
+
+    /* ---- response example ---- */
+    .resp-toggle {
+      font-size: 11px; color: var(--green); cursor: pointer;
+      font-weight: 600; margin-top: 4px; display: inline-block;
+      background: none; border: none; font-family: inherit;
+    }
+    .resp-toggle:hover { text-decoration: underline; }
+    .resp-example {
+      display: none; margin-top: 8px;
+    }
+    .resp-example.open { display: block; }
+
+    /* ---- try it console ---- */
+    .try-console {
+      margin-top: 40px; border: 1px solid var(--line); border-radius: 20px;
+      padding: 24px; background: rgba(255,255,255,.025);
+    }
+    .try-console h3 { font-size: 16px; margin-bottom: 4px; }
+    .try-console > p { color: var(--muted); font-size: 11.5px; margin-bottom: 16px; }
+    .try-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+    .try-row label { width: 85px; flex-shrink: 0; font-size: 11px; font-weight: 600; color: var(--muted); }
+    .try-row select, .try-row input {
+      flex: 1; padding: 8px 12px; border-radius: 10px;
+      background: rgba(0,0,0,.3); border: 1px solid var(--line2);
+      color: var(--text); font-size: 12px; font-family: inherit;
+    }
+    .try-row select:focus, .try-row input:focus { outline: none; border-color: var(--green); }
+    .try-btn {
+      padding: 10px 28px; border-radius: 999px; font-size: 12px; font-weight: 700;
+      background: var(--green); color: #0a3022; border: none; cursor: pointer;
+      transition: all .18s ease; font-family: inherit;
+    }
+    .try-btn:hover { filter: brightness(1.15); }
+    .try-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .try-output {
+      margin-top: 14px; padding: 16px; border-radius: 12px;
+      background: rgba(0,0,0,.35); border: 1px solid var(--line2);
+      font-family: monospace; font-size: 10.5px; white-space: pre-wrap;
+      max-height: 320px; overflow-y: auto; color: var(--muted);
+    }
+    .try-output .ok { color: var(--green); }
+    .try-output .err { color: var(--danger); }
+    .try-file-input {
+      flex: 1; padding: 8px 12px; border-radius: 10px;
+      background: rgba(0,0,0,.3); border: 1px solid var(--line2);
+      color: var(--text); font-size: 12px; font-family: inherit;
+    }
+
+    /* ---- responsive ---- */
+    @media (max-width: 680px) {
+      .landing-title { font-size: 34px; }
+      .landing-subtitle { font-size: 15px; }
+      .entry-cards { grid-template-columns: 1fr; }
+      .topnav { flex-wrap: wrap; gap: 8px; }
+      .status-grid { grid-template-columns: 1fr; }
+      .docs-layout { flex-direction: column; }
+      .docs-sidebar {
+        position: static; width: 100%; max-height: none;
+        display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 20px;
+      }
+      .docs-sidebar .ds-title { width: 100%; margin-bottom: 0; }
+      .docs-sidebar a { font-size: 10px; padding: 4px 8px; }
+      .try-row { flex-direction: column; align-items: stretch; }
+      .try-row label { width: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- ======== TOP NAV ======== -->
+    <nav class="topnav">
+      <a class="nav-brand" onclick="showView('landing')">
+        <div class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="#0a3022" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="21" width="14" height="2.5" rx="1"/><rect x="14" y="2" width="4" height="20" rx="1.5"/><rect x="13" y="3" width="7" height="6" rx="1.5"/><rect x="3" y="12" width="13" height="3" rx="1"/><circle cx="9.5" cy="13.5" r="3.5"/><rect x="14.5" y="9" width="3" height="5" rx="1"/><circle cx="16" cy="6.5" r="1.5"/><line x1="16" y1="4" x2="16" y2="2"/></svg></div>
+        <div>
+          <span class="nav-brand-text">DIffCAD Agent</span>
+          <span class="nav-brand-sub">Plant stomata intelligence platform</span>
+        </div>
+      </a>
+      <div class="nav-links">
+        <button class="nav-link active" data-view="landing" onclick="showView('landing')">Home</button>
+        <button class="nav-link" onclick="window.location.href='/agent'">Agent</button>
+        <button class="nav-link" data-view="docs" onclick="showView('docs')">API Docs</button>
+        <button class="nav-link" data-view="status" id="navStatusLink" onclick="showView('status'); refreshStatus();">Model Status</button>
+      </div>
+    </nav>
+
+    <!-- ======== LANDING VIEW ======== -->
+    <div class="view active" id="viewLanding">
+      <div class="landing-hero">
+        <h1 class="landing-title">DIffCAD Agent</h1>
+        <p class="landing-subtitle">Conversational stomata detection and phenotyping agent</p>
+        <p class="landing-desc">
+          Upload plant stomata images, videos, or live captures. Let the agent detect stomata,
+          calculate phenotyping metrics, review quality, and generate research-ready summaries.
+        </p>
+        <div class="entry-cards">
+          <div class="entry-card" onclick="window.location.href='/agent'">
+            <div class="ec-icon">&#x1F9E0;</div>
+            <div class="ec-title">Start Agent</div>
+            <div class="ec-desc">Enter the conversational workspace for stomata detection and phenotyping.</div>
+            <div class="ec-arrow">Open Agent &rarr;</div>
+          </div>
+          <div class="entry-card" onclick="showView('docs')">
+            <div class="ec-icon">&#x2699;</div>
+            <div class="ec-title">API Platform</div>
+            <div class="ec-desc">Access detection APIs, batch analysis endpoints, and integration documentation.</div>
+            <div class="ec-arrow">Browse API Docs &rarr;</div>
+          </div>
+        </div>
+      </div>
+      <div class="landing-footer">
+        DIffCAD Agent &mdash; Plant stomata intelligence platform &nbsp;|&nbsp;
+        <a onclick="showView('status'); refreshStatus();">Model Status</a>
+      </div>
+    </div>
+
+    <!-- ======== API DOCS VIEW ======== -->
+    <div class="view" id="viewDocs">
+      <div class="docs-layout" style="max-width:960px;margin:0 auto;width:100%;padding:40px 0 60px;">
+        <!-- Sidebar -->
+        <div class="docs-sidebar" id="docsSidebar">
+          <div class="ds-title">Endpoints</div>
+          <a href="#ep-detect-single" class="active">Single Detection</a>
+          <a href="#ep-detect-batch">Batch Detection</a>
+          <a href="#ep-detect-video">Video Detection</a>
+          <a href="#ep-detect-frame">Frame / Live</a>
+          <a href="#ep-agent-chat">Agent Chat</a>
+          <a href="#ep-session-results">Session Results</a>
+          <a href="#ep-session-reset">Session Reset</a>
+          <a href="#ep-export-csv">Export CSV</a>
+          <a href="#ep-status">Status</a>
+        </div>
+
+        <!-- Main content -->
+        <div class="docs-main">
+          <div style="margin-bottom:36px;">
+            <h2 style="font-size:30px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px;">API Documentation</h2>
+            <p style="color:var(--muted);font-size:13px;">
+              RESTful detection and phenotyping API. Base URL: <code style="font-family:monospace;color:var(--green2);" id="baseUrlDisplay"></code>
+            </p>
+            <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+              <span style="font-size:10px;padding:4px 10px;border-radius:999px;background:rgba(92,224,170,.08);border:1px solid rgba(92,224,170,.2);color:var(--green2);">No auth required</span>
+              <span style="font-size:10px;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid var(--line2);color:var(--muted2);">Rate limit: 30 req/min</span>
+              <span style="font-size:10px;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid var(--line2);color:var(--muted2);">Content-Type: multipart/form-data or application/json</span>
+            </div>
+          </div>
+
+          <!-- ============ /api/detect/single ============ -->
+          <div class="ep-section" id="ep-detect-single">
+            <span class="ep-badge post">POST</span><span class="ep-url">/api/detect/single</span>
+            <p>Detect stomata and apertures in a single microscope image. Uses YOLO-OBB models for oriented bounding box detection. Returns metrics, overlay image, and detection boxes.</p>
+
+            <table class="param-table">
+              <tr><th>Parameter</th><th>Type</th><th>Location</th><th>Description</th></tr>
+              <tr><td>image <span class="param-required">required</span></td><td>File</td><td>form</td><td>JPEG / PNG / BMP microscope image</td></tr>
+              <tr><td>plant_type <span class="param-optional">optional</span></td><td>String</td><td>form</td><td><code>dicotyledons</code> or <code>monocotyledons</code> (default: dicotyledons)</td></tr>
+              <tr><td>sample_type <span class="param-optional">optional</span></td><td>String</td><td>form</td><td><code>destructive</code> or <code>nondestructive</code> (default: nondestructive)</td></tr>
+              <tr><td>conf <span class="param-optional">optional</span></td><td>Float</td><td>form</td><td>Confidence threshold 0-1 (default: 0.5)</td></tr>
+              <tr><td>iou <span class="param-optional">optional</span></td><td>Float</td><td>form</td><td>IoU overlap threshold 0-1 (default: 0.7)</td></tr>
+              <tr><td>scale <span class="param-optional">optional</span></td><td>Float</td><td>form</td><td>Scale in µm for real-world metrics (default: 100.0)</td></tr>
+              <tr><td>session_id <span class="param-optional">optional</span></td><td>String</td><td>form</td><td>Session key for grouping results (default: "default")</td></tr>
+            </table>
+
+            <div class="code-tabs">
+              <button class="code-tab active" onclick="switchCodeTab(this,'curl-single')">curl</button>
+              <button class="code-tab" onclick="switchCodeTab(this,'py-single')">Python</button>
+              <button class="code-tab" onclick="switchCodeTab(this,'js-single')">JavaScript</button>
+            </div>
+            <div class="code-block" id="curl-single"><span class="cmt"># Single image detection with dicot model</span>
+<span class="kw">curl</span> -X POST <span class="str" id="baseUrlSingle">https://diffcad-agent.onrender.com</span>/api/detect/single \
+  -F <span class="str">"image=@stomata_sample.jpg"</span> \
+  -F <span class="str">"plant_type=dicotyledons"</span> \
+  -F <span class="str">"sample_type=nondestructive"</span> \
+  -F <span class="str">"conf=0.5"</span> \
+  -F <span class="str">"scale=100.0"</span>
+<button class="copy-btn" onclick="copyCode('curl-single',this)">Copy</button></div>
+            <div class="code-block" id="py-single" style="display:none;"><span class="kw">import</span> requests
+
+<span class="cmt"># Single image detection</span>
+<span class="kw">with</span> <span class="fn">open</span>(<span class="str">'stomata_sample.jpg'</span>, <span class="str">'rb'</span>) <span class="kw">as</span> f:
+    files = {<span class="str">'image'</span>: f}
+    data = {
+        <span class="str">'plant_type'</span>: <span class="str">'dicotyledons'</span>,
+        <span class="str">'sample_type'</span>: <span class="str">'nondestructive'</span>,
+        <span class="str">'conf'</span>: <span class="str">'0.5'</span>,
+        <span class="str">'scale'</span>: <span class="str">'100.0'</span>,
+    }
+    resp = requests.<span class="fn">post</span>(<span class="str">f"</span><span class="str" id="pyBaseSingle">https://diffcad-agent.onrender.com</span><span class="str">/api/detect/single"</span>,
+                          files=files, data=data)
+    result = resp.json()
+
+<span class="kw">print</span>(<span class="fn">f</span><span class="str">"Stomata: {result['metrics']['stoma_count']}"</span>)
+<span class="kw">print</span>(<span class="fn">f</span><span class="str">"Density: {result['metrics']['stoma_density_mm2']:.1f} mm⁻²"</span>)
+<button class="copy-btn" onclick="copyCode('py-single',this)">Copy</button></div>
+            <div class="code-block" id="js-single" style="display:none;"><span class="cmt">// Single image detection in browser</span>
+<span class="kw">const</span> form = <span class="kw">new</span> <span class="fn">FormData</span>();
+form.append(<span class="str">'image'</span>, fileInput.files[0]);
+form.append(<span class="str">'plant_type'</span>, <span class="str">'dicotyledons'</span>);
+form.append(<span class="str">'sample_type'</span>, <span class="str">'nondestructive'</span>);
+form.append(<span class="str">'conf'</span>, <span class="str">'0.5'</span>);
+
+<span class="kw">const</span> resp = <span class="kw">await</span> <span class="fn">fetch</span>(<span class="str">`</span><span class="str" id="jsBaseSingle">https://diffcad-agent.onrender.com</span><span class="str">/api/detect/single`</span>, {
+    method: <span class="str">'POST'</span>,
+    body: form,
+});
+<span class="kw">const</span> result = <span class="kw">await</span> resp.json();
+<span class="fn">console</span>.log(<span class="str">'Stomata:'</span>, result.metrics.stoma_count);
+<span class="fn">console</span>.log(<span class="str">'Density:'</span>, result.metrics.stoma_density_mm2);
+<button class="copy-btn" onclick="copyCode('js-single',this)">Copy</button></div>
+
+            <button class="resp-toggle" onclick="this.nextElementSibling.classList.toggle('open');this.textContent=this.textContent.includes('Show')?'Hide response example':'Show response example';">Show response example &darr;</button>
+            <div class="resp-example">
+              <div class="code-block">{
+  <span class="str">"success"</span>: <span class="kw">true</span>,
+  <span class="str">"file_name"</span>: <span class="str">"stomata_sample.jpg"</span>,
+  <span class="str">"metrics"</span>: {
+    <span class="str">"stoma_count"</span>: 23,
+    <span class="str">"aperture_count"</span>: 12,
+    <span class="str">"stoma_avg_height_um"</span>: 28.4,
+    <span class="str">"stoma_avg_width_um"</span>: 18.2,
+    <span class="str">"stoma_aspect_ratio"</span>: 1.56,
+    <span class="str">"aperture_avg_height_um"</span>: 12.1,
+    <span class="str">"aperture_avg_width_um"</span>: 6.8,
+    <span class="str">"aperture_aspect_ratio"</span>: 1.78,
+    <span class="str">"stoma_density_mm2"</span>: 145.3,
+    <span class="str">"conductance"</span>: 0.82,
+    <span class="str">"image_area_mm2"</span>: 0.158
+  },
+  <span class="str">"overlay_b64"</span>: <span class="str">"iVBORw0KGgo..."</span>,
+  <span class="str">"boxes"</span>: [[cx,cy,w,h,angle,cls], ...],
+  <span class="str">"is_mock"</span>: <span class="kw">false</span>,
+  <span class="str">"plant_type"</span>: <span class="str">"dicotyledons"</span>,
+  <span class="str">"sample_type"</span>: <span class="str">"nondestructive"</span>
+}</div>
+            </div>
+          </div>
+
+          <!-- ============ /api/detect/batch ============ -->
+          <div class="ep-section" id="ep-detect-batch">
+            <span class="ep-badge post">POST</span><span class="ep-url">/api/detect/batch</span>
+            <p>Process multiple images in parallel. Accepts <code>images</code> (plural) as multiple file uploads. Results sorted by order processed.</p>
+
+            <table class="param-table">
+              <tr><th>Parameter</th><th>Type</th><th>Location</th><th>Description</th></tr>
+              <tr><td>images <span class="param-required">required</span></td><td>File[]</td><td>form</td><td>Multiple JPEG / PNG / BMP files (field name: images)</td></tr>
+              <tr><td>plant_type <span class="param-optional">optional</span></td><td>String</td><td>form</td><td>Same as single detection</td></tr>
+              <tr><td>sample_type <span class="param-optional">optional</span></td><td>String</td><td>form</td><td>Same as single detection</td></tr>
+              <tr><td>conf <span class="param-optional">optional</span></td><td>Float</td><td>form</td><td>Confidence threshold (default: 0.5)</td></tr>
+              <tr><td>iou <span class="param-optional">optional</span></td><td>Float</td><td>form</td><td>IoU threshold (default: 0.7)</td></tr>
+              <tr><td>scale <span class="param-optional">optional</span></td><td>Float</td><td>form</td><td>Scale in µm (default: 100.0)</td></tr>
+              <tr><td>session_id <span class="param-optional">optional</span></td><td>String</td><td>form</td><td>Session key</td></tr>
+            </table>
+
+            <div class="code-tabs">
+              <button class="code-tab active" onclick="switchCodeTab(this,'curl-batch')">curl</button>
+              <button class="code-tab" onclick="switchCodeTab(this,'py-batch')">Python</button>
+            </div>
+            <div class="code-block" id="curl-batch"><span class="cmt"># Batch detection on multiple images</span>
+<span class="kw">curl</span> -X POST <span class="str">BASE_URL</span>/api/detect/batch \
+  -F <span class="str">"images=@sample_01.jpg"</span> \
+  -F <span class="str">"images=@sample_02.jpg"</span> \
+  -F <span class="str">"images=@sample_03.jpg"</span> \
+  -F <span class="str">"plant_type=dicotyledons"</span> \
+  -F <span class="str">"sample_type=nondestructive"</span>
+<button class="copy-btn" onclick="copyCode('curl-batch',this)">Copy</button></div>
+            <div class="code-block" id="py-batch" style="display:none;"><span class="kw">import</span> requests
+
+files = [
+    (<span class="str">'images'</span>, (<span class="str">'s1.jpg'</span>, <span class="fn">open</span>(<span class="str">'s1.jpg'</span>, <span class="str">'rb'</span>), <span class="str">'image/jpeg'</span>)),
+    (<span class="str">'images'</span>, (<span class="str">'s2.jpg'</span>, <span class="fn">open</span>(<span class="str">'s2.jpg'</span>, <span class="str">'rb'</span>), <span class="str">'image/jpeg'</span>)),
+]
+data = {<span class="str">'plant_type'</span>: <span class="str">'dicotyledons'</span>, <span class="str">'sample_type'</span>: <span class="str">'nondestructive'</span>}
+resp = requests.<span class="fn">post</span>(<span class="str">'BASE_URL/api/detect/batch'</span>, files=files, data=data)
+result = resp.json()
+
+<span class="kw">for</span> r <span class="kw">in</span> result[<span class="str">'results'</span>]:
+    m = r[<span class="str">'metrics'</span>]
+    <span class="kw">print</span>(<span class="fn">f</span><span class="str">"{r['file_name']}: {m['stoma_count']} stomata"</span>)
+<button class="copy-btn" onclick="copyCode('py-batch',this)">Copy</button></div>
+          </div>
+
+          <!-- ============ /api/detect/video ============ -->
+          <div class="ep-section" id="ep-detect-video">
+            <span class="ep-badge post">POST</span><span class="ep-url">/api/detect/video</span>
+            <p>Extract frames from a video at the given interval and run detection on each extracted frame. Video file is deleted after processing.</p>
+
+            <table class="param-table">
+              <tr><th>Parameter</th><th>Type</th><th>Location</th><th>Description</th></tr>
+              <tr><td>video <span class="param-required">required</span></td><td>File</td><td>form</td><td>Video file (mp4, avi, mov)</td></tr>
+              <tr><td>frame_interval <span class="param-optional">optional</span></td><td>Int</td><td>form</td><td>Process every Nth frame (default: 30)</td></tr>
+              <tr><td>plant_type <span class="param-optional">optional</span></td><td>String</td><td>form</td><td>dicotyledons / monocotyledons</td></tr>
+              <tr><td>sample_type <span class="param-optional">optional</span></td><td>String</td><td>form</td><td>destructive / nondestructive</td></tr>
+              <tr><td>conf <span class="param-optional">optional</span></td><td>Float</td><td>form</td><td>Confidence threshold (default: 0.5)</td></tr>
+              <tr><td>session_id <span class="param-optional">optional</span></td><td>String</td><td>form</td><td>Session key</td></tr>
+            </table>
+
+            <div class="code-tabs">
+              <button class="code-tab active" onclick="switchCodeTab(this,'curl-video')">curl</button>
+              <button class="code-tab" onclick="switchCodeTab(this,'py-video')">Python</button>
+            </div>
+            <div class="code-block" id="curl-video"><span class="kw">curl</span> -X POST <span class="str">BASE_URL</span>/api/detect/video \
+  -F <span class="str">"video=@microscope_video.mp4"</span> \
+  -F <span class="str">"frame_interval=30"</span> \
+  -F <span class="str">"plant_type=monocotyledons"</span> \
+  -F <span class="str">"sample_type=nondestructive"</span>
+<button class="copy-btn" onclick="copyCode('curl-video',this)">Copy</button></div>
+            <div class="code-block" id="py-video" style="display:none;"><span class="kw">import</span> requests
+
+<span class="kw">with</span> <span class="fn">open</span>(<span class="str">'microscope_video.mp4'</span>, <span class="str">'rb'</span>) <span class="kw">as</span> f:
+    resp = requests.<span class="fn">post</span>(<span class="str">'BASE_URL/api/detect/video'</span>,
+        files={<span class="str">'video'</span>: f},
+        data={
+            <span class="str">'frame_interval'</span>: <span class="str">'30'</span>,
+            <span class="str">'plant_type'</span>: <span class="str">'monocotyledons'</span>,
+            <span class="str">'sample_type'</span>: <span class="str">'nondestructive'</span>,
+        })
+    result = resp.json()
+
+<span class="kw">print</span>(<span class="fn">f</span><span class="str">"Processed {result['detected_frames']} frames"</span>)
+<button class="copy-btn" onclick="copyCode('py-video',this)">Copy</button></div>
+          </div>
+
+          <!-- ============ /api/detect/frame ============ -->
+          <div class="ep-section" id="ep-detect-frame">
+            <span class="ep-badge post">POST</span><span class="ep-url">/api/detect/frame</span>
+            <p>Detect stomata from a base64-encoded JPEG frame. Designed for live camera capture or real-time streaming scenarios. JSON body instead of multipart.</p>
+
+            <table class="param-table">
+              <tr><th>Parameter</th><th>Type</th><th>Location</th><th>Description</th></tr>
+              <tr><td>image_b64 <span class="param-required">required</span></td><td>String</td><td>JSON</td><td>Base64-encoded JPEG image data (without data: prefix)</td></tr>
+              <tr><td>plant_type <span class="param-optional">optional</span></td><td>String</td><td>JSON</td><td>dicotyledons / monocotyledons</td></tr>
+              <tr><td>sample_type <span class="param-optional">optional</span></td><td>String</td><td>JSON</td><td>destructive / nondestructive</td></tr>
+              <tr><td>conf <span class="param-optional">optional</span></td><td>Float</td><td>JSON</td><td>Confidence threshold (default: 0.5)</td></tr>
+              <tr><td>session_id <span class="param-optional">optional</span></td><td>String</td><td>JSON</td><td>Session key</td></tr>
+            </table>
+
+            <div class="code-tabs">
+              <button class="code-tab active" onclick="switchCodeTab(this,'curl-frame')">curl</button>
+              <button class="code-tab" onclick="switchCodeTab(this,'py-frame')">Python</button>
+            </div>
+            <div class="code-block" id="curl-frame"><span class="kw">curl</span> -X POST <span class="str">BASE_URL</span>/api/detect/frame \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"image_b64":"'"$(base64 frame.jpg)"'","plant_type":"dicotyledons"}'</span>
+<button class="copy-btn" onclick="copyCode('curl-frame',this)">Copy</button></div>
+            <div class="code-block" id="py-frame" style="display:none;"><span class="kw">import</span> requests
+<span class="kw">import</span> base64
+
+<span class="kw">with</span> <span class="fn">open</span>(<span class="str">'frame.jpg'</span>, <span class="str">'rb'</span>) <span class="kw">as</span> f:
+    b64 = base64.<span class="fn">b64encode</span>(f.read()).decode()
+
+resp = requests.<span class="fn">post</span>(<span class="str">'BASE_URL/api/detect/frame'</span>,
+    json={
+        <span class="str">'image_b64'</span>: b64,
+        <span class="str">'plant_type'</span>: <span class="str">'dicotyledons'</span>,
+        <span class="str">'conf'</span>: 0.5,
+    })
+result = resp.json()
+<button class="copy-btn" onclick="copyCode('py-frame',this)">Copy</button></div>
+          </div>
+
+          <!-- ============ /api/agent/chat ============ -->
+          <div class="ep-section" id="ep-agent-chat">
+            <span class="ep-badge post">POST</span><span class="ep-url">/api/agent/chat</span>
+            <p>Send a natural-language message to the DIffCAD conversational agent. The agent is context-aware: include current detection context for richer responses.</p>
+
+            <table class="param-table">
+              <tr><th>Parameter</th><th>Type</th><th>Location</th><th>Description</th></tr>
+              <tr><td>message <span class="param-required">required</span></td><td>String</td><td>JSON</td><td>Natural language message to the agent</td></tr>
+              <tr><td>context <span class="param-optional">optional</span></td><td>Object</td><td>JSON</td><td>Detection context: plant_type, sample_type, metrics, batch_summary, etc.</td></tr>
+              <tr><td>session_id <span class="param-optional">optional</span></td><td>String</td><td>JSON</td><td>Session key (default: "default")</td></tr>
+            </table>
+
+            <div class="code-tabs">
+              <button class="code-tab active" onclick="switchCodeTab(this,'curl-chat')">curl</button>
+              <button class="code-tab" onclick="switchCodeTab(this,'py-chat')">Python</button>
+            </div>
+            <div class="code-block" id="curl-chat"><span class="kw">curl</span> -X POST <span class="str">BASE_URL</span>/api/agent/chat \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"message":"Summarize the last detection results","context":{"plant_type":"dicotyledons","metrics":{"stoma_count":23,"stoma_density_mm2":145.3}},"session_id":"my_session"}'</span>
+<button class="copy-btn" onclick="copyCode('curl-chat',this)">Copy</button></div>
+            <div class="code-block" id="py-chat" style="display:none;"><span class="kw">import</span> requests
+
+resp = requests.<span class="fn">post</span>(<span class="str">'BASE_URL/api/agent/chat'</span>,
+    json={
+        <span class="str">'message'</span>: <span class="str">'What does stomata density of 145 indicate?'</span>,
+        <span class="str">'context'</span>: {
+            <span class="str">'plant_type'</span>: <span class="str">'dicotyledons'</span>,
+            <span class="str">'metrics'</span>: {<span class="str">'stoma_density_mm2'</span>: 145.3},
+        },
+        <span class="str">'session_id'</span>: <span class="str">'my_session'</span>,
+    })
+result = resp.json()
+<span class="kw">print</span>(result[<span class="str">'reply'</span>])
+<button class="copy-btn" onclick="copyCode('py-chat',this)">Copy</button></div>
+          </div>
+
+          <!-- ============ /api/session/results ============ -->
+          <div class="ep-section" id="ep-session-results">
+            <span class="ep-badge get">GET</span><span class="ep-url">/api/session/results</span>
+            <p>Retrieve all stored detection results for a session. Useful for chaining: detect first, then retrieve results for further analysis.</p>
+
+            <table class="param-table">
+              <tr><th>Parameter</th><th>Type</th><th>Location</th><th>Description</th></tr>
+              <tr><td>session_id <span class="param-optional">optional</span></td><td>String</td><td>query</td><td>Session key (default: "default")</td></tr>
+            </table>
+
+            <div class="code-block"><span class="kw">curl</span> <span class="str">"BASE_URL/api/session/results?session_id=my_session"</span>
+<button class="copy-btn" onclick="copyCode(this.parentElement,this)">Copy</button></div>
+          </div>
+
+          <!-- ============ /api/session/reset ============ -->
+          <div class="ep-section" id="ep-session-reset">
+            <span class="ep-badge post">POST</span><span class="ep-url">/api/session/reset</span>
+            <p>Clear all stored results for a session. Call between experiments to start fresh.</p>
+
+            <table class="param-table">
+              <tr><th>Parameter</th><th>Type</th><th>Location</th><th>Description</th></tr>
+              <tr><td>session_id <span class="param-optional">optional</span></td><td>String</td><td>JSON</td><td>Session key (default: "default")</td></tr>
+            </table>
+
+            <div class="code-block"><span class="kw">curl</span> -X POST <span class="str">BASE_URL</span>/api/session/reset \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"session_id":"my_session"}'</span>
+<button class="copy-btn" onclick="copyCode(this.parentElement,this)">Copy</button></div>
+          </div>
+
+          <!-- ============ /api/export/csv ============ -->
+          <div class="ep-section" id="ep-export-csv">
+            <span class="ep-badge post">POST</span><span class="ep-url">/api/export/csv</span>
+            <p>Export all session results as a downloadable CSV file with full stomata and aperture metrics. Includes stoma count, density, conductance, dimensions, and per-image breakdown.</p>
+
+            <table class="param-table">
+              <tr><th>Parameter</th><th>Type</th><th>Location</th><th>Description</th></tr>
+              <tr><td>session_id <span class="param-optional">optional</span></td><td>String</td><td>JSON</td><td>Session key (default: "default")</td></tr>
+            </table>
+
+            <div class="code-tabs">
+              <button class="code-tab active" onclick="switchCodeTab(this,'curl-csv')">curl</button>
+              <button class="code-tab" onclick="switchCodeTab(this,'py-csv')">Python</button>
+            </div>
+            <div class="code-block" id="curl-csv"><span class="cmt"># Download CSV results for a session</span>
+<span class="kw">curl</span> -X POST <span class="str">BASE_URL</span>/api/export/csv \
+  -H <span class="str">"Content-Type: application/json"</span> \
+  -d <span class="str">'{"session_id":"my_session"}'</span> \
+  -o stomata_results.csv
+<button class="copy-btn" onclick="copyCode('curl-csv',this)">Copy</button></div>
+            <div class="code-block" id="py-csv" style="display:none;"><span class="kw">import</span> requests
+
+resp = requests.<span class="fn">post</span>(<span class="str">'BASE_URL/api/export/csv'</span>,
+    json={<span class="str">'session_id'</span>: <span class="str">'my_session'</span>})
+
+<span class="kw">with</span> <span class="fn">open</span>(<span class="str">'stomata_results.csv'</span>, <span class="str">'w'</span>) <span class="kw">as</span> f:
+    f.write(resp.text)
+
+<span class="kw">print</span>(<span class="str">'Exported results to stomata_results.csv'</span>)
+<button class="copy-btn" onclick="copyCode('py-csv',this)">Copy</button></div>
+          </div>
+
+          <!-- ============ /api/status ============ -->
+          <div class="ep-section" id="ep-status">
+            <span class="ep-badge get">GET</span><span class="ep-url">/api/status</span>
+            <p>Health check and model inventory. Returns device info, PyTorch/ultralytics availability, and per-weight load status. No parameters needed.</p>
+
+            <div class="code-block"><span class="kw">curl</span> <span class="str">BASE_URL</span>/api/status
+<button class="copy-btn" onclick="copyCode(this.parentElement,this)">Copy</button></div>
+          </div>
+
+          <!-- ======== TRY IT CONSOLE ======== -->
+          <div class="try-console" id="tryConsole">
+            <h3>Try It Live</h3>
+            <p>Test the API directly from this page. Select an endpoint, fill in parameters, and run.</p>
+            <div class="try-row">
+              <label>Endpoint</label>
+              <select id="tryEndpoint" onchange="updateTryForm()">
+                <option value="/api/status" data-method="GET">GET /api/status</option>
+                <option value="/api/detect/single" data-method="POST" data-type="multipart">POST /api/detect/single</option>
+                <option value="/api/detect/batch" data-method="POST" data-type="multipart">POST /api/detect/batch</option>
+                <option value="/api/detect/frame" data-method="POST" data-type="json">POST /api/detect/frame</option>
+                <option value="/api/agent/chat" data-method="POST" data-type="json">POST /api/agent/chat</option>
+                <option value="/api/export/csv" data-method="POST" data-type="json">POST /api/export/csv</option>
+                <option value="/api/session/results" data-method="GET">GET /api/session/results</option>
+              </select>
+            </div>
+            <div id="tryFormFields"></div>
+            <div style="margin-top:12px;display:flex;gap:10px;align-items:center;">
+              <button class="try-btn" id="tryRunBtn" onclick="runTryIt()">Run Request</button>
+              <span style="font-size:10px;color:var(--muted2);" id="tryStatus"></span>
+            </div>
+            <div class="try-output" id="tryOutput" style="display:none;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== MODEL STATUS VIEW ======== -->
+    <div class="view" id="viewStatus">
+      <div class="status-container">
+        <div class="status-header">
+          <h2>Model Status</h2>
+          <p>Real-time platform and model weight information.</p>
+        </div>
+        <div id="statusContent">
+          <div style="text-align:center;padding:40px;color:var(--muted);">
+            <span class="loading-spin"></span>&nbsp; Querying backend status...
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+
+    // ----- auto-detect base URL -----
+    const BASE_URL = (() => {
+      const loc = window.location.origin;
+      // If running on localhost or trycloudflare, use the same origin
+      if (loc.includes('localhost') || loc.includes('127.0.0.1') || loc.includes('trycloudflare') || loc.includes('onrender')) {
+        return loc;
+      }
+      // Fallback: try to detect from current page
+      return loc || 'https://diffcad-agent.onrender.com';
+    })();
+
+    // Replace base URL placeholders in the documentation
+    function replaceBaseUrl() {
+      // Update the base URL display
+      const display = $('baseUrlDisplay');
+      if (display) display.textContent = BASE_URL;
+
+      // Update all code blocks that contain BASE_URL placeholder
+      document.querySelectorAll('.code-block').forEach(block => {
+        block.innerHTML = block.innerHTML.replace(/BASE_URL/g, BASE_URL);
+      });
+
+      // Update specific span elements that have the base URL
+      ['baseUrlSingle', 'pyBaseSingle', 'jsBaseSingle'].forEach(id => {
+        const el = $(id);
+        if (el) el.textContent = BASE_URL;
+      });
+    }
+
+    function showView(name) {
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.querySelectorAll('.nav-link[data-view]').forEach(l => l.classList.remove('active'));
+
+      const viewMap = { landing: 'viewLanding', docs: 'viewDocs', status: 'viewStatus' };
+      const viewEl = $(viewMap[name]);
+      if (viewEl) viewEl.classList.add('active');
+
+      const navLink = document.querySelector(`.nav-link[data-view="${name}"]`);
+      if (navLink) navLink.classList.add('active');
+
+      if (name === 'docs') replaceBaseUrl();
+    }
+
+    // ----- API code tabs -----
+    function switchCodeTab(btn, blockId) {
+      const parent = btn.parentElement;
+      parent.querySelectorAll('.code-tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+
+      const section = btn.closest('.ep-section');
+      section.querySelectorAll('.code-block').forEach(b => { b.style.display = 'none'; });
+      const target = section.querySelector('#' + blockId);
+      if (target) target.style.display = 'block';
+    }
+
+    // ----- copy code button -----
+    function copyCode(blockOrId, btn) {
+      let block;
+      if (typeof blockOrId === 'string') {
+        block = document.getElementById(blockOrId);
+        if (!block) block = document.querySelector('#' + blockOrId);
+      } else {
+        block = blockOrId;
+      }
+
+      if (!block) return;
+
+      // Get text content, strip HTML tags for code blocks
+      let text;
+      if (block.classList.contains('code-block')) {
+        text = block.innerText.replace(/Copy$/, '').trim();
+      } else {
+        text = block.innerText.trim();
+      }
+
+      navigator.clipboard.writeText(text).then(() => {
+        if (btn && btn.classList.contains('copy-btn')) {
+          btn.textContent = 'Copied!';
+          btn.classList.add('copied');
+          setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1800);
+        }
+      }).catch(() => {
+        if (btn) { btn.textContent = 'Failed'; setTimeout(() => { btn.textContent = 'Copy'; }, 1500); }
+      });
+    }
+
+    // ----- sidebar scroll tracking -----
+    function updateSidebarActive() {
+      const sections = document.querySelectorAll('.ep-section');
+      const links = document.querySelectorAll('.docs-sidebar a');
+      let current = null;
+
+      sections.forEach(sec => {
+        const top = sec.getBoundingClientRect().top;
+        if (top < 200) current = sec.id;
+      });
+
+      links.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + current) link.classList.add('active');
+      });
+    }
+
+    const docsMain = document.querySelector('.docs-main');
+    if (docsMain) {
+      docsMain.addEventListener('scroll', updateSidebarActive, { passive: true });
+    }
+
+    // ----- try it console -----
+    function updateTryForm() {
+      const select = $('tryEndpoint');
+      const option = select.options[select.selectedIndex];
+      const method = option.dataset.method;
+      const type = option.dataset.type;
+      const path = option.value;
+      const fields = $('tryFormFields');
+      const output = $('tryOutput');
+      output.style.display = 'none';
+
+      let html = '';
+
+      if (method === 'GET') {
+        if (path === '/api/session/results') {
+          html += '<div class="try-row"><label>session_id</label><input type="text" id="try_session" value="default" placeholder="Session ID"/></div>';
+        }
+      } else if (type === 'multipart') {
+        html += '<div class="try-row"><label>Image</label><input type="file" class="try-file-input" id="try_image" accept="image/*"/></div>';
+        if (path === '/api/detect/batch') {
+          html += '<div class="try-row"><label>Images</label><input type="file" class="try-file-input" id="try_images" accept="image/*" multiple/></div>';
+        }
+        html += '<div class="try-row"><label>Plant Type</label><select id="try_plant"><option value="dicotyledons">Dicot</option><option value="monocotyledons">Monocot</option></select></div>';
+        html += '<div class="try-row"><label>Sample</label><select id="try_sample"><option value="nondestructive">Nondestructive</option><option value="destructive">Destructive</option></select></div>';
+        html += '<div class="try-row"><label>Confidence</label><input type="number" id="try_conf" value="0.5" step="0.05" min="0" max="1"/></div>';
+      } else if (type === 'json') {
+        html += '<div class="try-row"><label>Body (JSON)</label><input type="text" id="try_body" value=\'{"message":"Hello"}\' placeholder=\'{"key":"value"}\'/></div>';
+        if (path === '/api/agent/chat') {
+          html += '<div class="try-row"><label>Body (JSON)</label><input type="text" id="try_body" value=\'{"message":"Summarize my results","context":{"plant_type":"dicotyledons"},"session_id":"demo"}\' placeholder=\'{"message":"..."}\'/></div>';
+        } else if (path === '/api/detect/frame') {
+          html += '<div class="try-row"><label>Body (JSON)</label><input type="text" id="try_body" value=\'{"image_b64":"<base64>","plant_type":"dicotyledons"}\' placeholder=\'{"image_b64":"...","plant_type":"dicotyledons"}\'/></div>';
+        } else if (path === '/api/export/csv') {
+          html += '<div class="try-row"><label>Body (JSON)</label><input type="text" id="try_body" value=\'{"session_id":"default"}\' placeholder=\'{"session_id":"default"}\'/></div>';
+        }
+      }
+
+      fields.innerHTML = html;
+    }
+
+    async function runTryIt() {
+      const select = $('tryEndpoint');
+      const option = select.options[select.selectedIndex];
+      const method = option.dataset.method;
+      const type = option.dataset.type;
+      const path = option.value;
+      const output = $('tryOutput');
+      const status = $('tryStatus');
+      const btn = $('tryRunBtn');
+
+      btn.disabled = true;
+      status.textContent = 'Running...';
+      output.style.display = 'block';
+      output.innerHTML = '<span style="color:var(--muted2);">Requesting ' + BASE_URL + path + '...</span>';
+
+      try {
+        let resp;
+        if (method === 'GET') {
+          const sessionId = ($('try_session')?.value || 'default');
+          resp = await fetch(BASE_URL + path + '?session_id=' + encodeURIComponent(sessionId));
+        } else if (type === 'multipart') {
+          const formData = new FormData();
+          if (path === '/api/detect/batch') {
+            const imgInput = $('try_images');
+            if (imgInput && imgInput.files) {
+              for (const f of imgInput.files) formData.append('images', f);
+            }
+          } else {
+            const imgInput = $('try_image');
+            if (imgInput && imgInput.files[0]) {
+              formData.append('image', imgInput.files[0]);
+            }
+          }
+          formData.append('plant_type', ($('try_plant')?.value || 'dicotyledons'));
+          formData.append('sample_type', ($('try_sample')?.value || 'nondestructive'));
+          formData.append('conf', ($('try_conf')?.value || '0.5'));
+          resp = await fetch(BASE_URL + path, { method: 'POST', body: formData });
+        } else if (type === 'json') {
+          let body;
+          try {
+            body = JSON.parse($('try_body')?.value || '{}');
+          } catch (e) {
+            output.innerHTML = '<span class="err">Invalid JSON: ' + e.message + '</span>';
+            btn.disabled = false;
+            status.textContent = '';
+            return;
+          }
+          resp = await fetch(BASE_URL + path, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+        }
+
+        const statusCode = resp.status;
+        const text = await resp.text();
+        let formatted;
+        try {
+          const json = JSON.parse(text);
+          formatted = JSON.stringify(json, null, 2);
+        } catch (e) {
+          formatted = text;
+        }
+
+        const statusClass = resp.ok ? 'ok' : 'err';
+        output.innerHTML =
+          '<span class="' + statusClass + '">HTTP ' + statusCode + ' ' + (resp.ok ? 'OK' : 'Error') + '</span>\n\n' +
+          escHtml(formatted).replace(/\n/g, '<br>');
+        status.textContent = resp.ok ? 'Done' : 'Error ' + statusCode;
+
+      } catch (e) {
+        output.innerHTML = '<span class="err">Request failed: ' + escHtml(e.message) + '</span>';
+        status.textContent = 'Failed';
+      }
+
+      btn.disabled = false;
+    }
+
+    // init try form on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      updateTryForm();
+      replaceBaseUrl();
+    });
+
+    async function refreshStatus() {
+      const container = $('statusContent');
+      if (!container) return;
+
+      const navLink = $('navStatusLink');
+      container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);"><span class="loading-spin"></span>&nbsp; Querying backend...</div>';
+
+      try {
+        const resp = await fetch('/api/status');
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+
+        const details = data.detection_weight_details || {};
+        const available = data.detection_weights_available || [];
+        const missing = data.detection_weights_missing || [];
+        const loadFailed = data.detection_weights_load_failed || [];
+
+        const usableW = available.filter(w => {
+          const d = details[w];
+          return d && d.exists && !d.load_failed;
+        });
+
+        let html = '<div class="status-grid">';
+
+        // Backend
+        html += '<div class="status-card"><label>Backend</label><div class="val ok">Online</div></div>';
+
+        // Device
+        html += '<div class="status-card"><label>Device</label><div class="val">' + escHtml(data.device || 'cpu') + '</div></div>';
+
+        // Torch
+        html += '<div class="status-card"><label>PyTorch</label><div class="val ' + (data.torch_available ? 'ok' : 'err') + '">' + (data.torch_available ? 'Available' : 'Missing') + '</div></div>';
+
+        // Ultralytics
+        html += '<div class="status-card"><label>ultralytics</label><div class="val ' + (data.ultralytics_available ? 'ok' : 'err') + '">' + (data.ultralytics_available ? 'Available' : 'Missing') + '</div></div>';
+
+        // Weights loaded
+        html += '<div class="status-card"><label>Weights Loaded</label><div class="val ' + (usableW.length > 0 ? 'ok' : 'warn') + '">' + usableW.length + ' / ' + (available.length + missing.length) + '</div></div>';
+
+        // Torch version
+        html += '<div class="status-card"><label>Torch Version</label><div class="val">' + escHtml(data.torch_version || '—') + '</div></div>';
+
+        html += '</div>';
+
+        // Weight details
+        if (Object.keys(details).length > 0) {
+          html += '<div class="weight-list"><h3>Detection Weights</h3>';
+          for (const [key, w] of Object.entries(details)) {
+            let statusClass = 'loaded';
+            let statusText = 'Ready';
+            if (!w.exists) { statusClass = 'missing'; statusText = 'Missing'; }
+            else if (w.load_failed) { statusClass = 'failed'; statusText = 'Load Failed'; }
+
+            html += '<div class="weight-row">' +
+              '<span class="w-name">' + escHtml(key) + '</span>' +
+              '<span style="color:var(--muted2);font-size:10px;">' + escHtml(w.file_name) + ' &middot; ' + (w.size_mb || '?') + ' MB</span>' +
+              '<span class="w-status ' + statusClass + '">' + statusText + '</span>' +
+              '</div>';
+            if (w.load_error) {
+              html += '<div style="font-size:9.5px;color:var(--danger);padding:2px 14px 8px;">Error: ' + escHtml(w.load_error.substring(0, 120)) + '</div>';
+            }
+          }
+          html += '</div>';
+        }
+
+        container.innerHTML = html;
+        if (navLink) navLink.classList.add('dot-indicator');
+
+      } catch (e) {
+        container.innerHTML = '<div class="status-error">Backend unreachable. Ensure the server is running on this machine. (' + escHtml(e.message) + ')</div>';
+        if (navLink) { navLink.classList.add('dot-indicator'); navLink.classList.add('offline'); }
+      }
+    }
+
+    function escHtml(s) {
+      const div = document.createElement('div');
+      div.appendChild(document.createTextNode(String(s)));
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>

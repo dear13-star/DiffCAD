@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: diffcad-agent
+    env: python
+    region: singapore
+    plan: free
+    buildCommand: pip install -r requirements_render.txt
+    startCommand: gunicorn backend_api:app --bind 0.0.0.0:$PORT --timeout 600 --workers 1 --threads 1
+    envVars:
+      - key: USE_SUBPROCESS
+        value: "1"
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: PRELOAD_MODELS
+        value: "0"
+      - key: OMP_NUM_THREADS
+        value: "1"
+      - key: MKL_NUM_THREADS
+        value: "1"
+      - key: OPENBLAS_NUM_THREADS
+        value: "1"
+      - key: VECLIB_MAXIMUM_THREADS
+        value: "1"
+      - key: NUMEXPR_NUM_THREADS
+        value: "1"
+      - key: MALLOC_TRIM_THRESHOLD_
+        value: "100000"
